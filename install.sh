@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# 姜小胡提问 skill 一键部署（大磊分发给小伙伴）
-# 用法: bash -c "$(curl -fsSL <URL>/install.sh)"
+# 姜小胡提问 skill 通用部署（Claude Code / Codex / Hermes 一装全通）
+# 用法: PASS=<密码> bash -c "$(curl -fsSL <URL>/install.sh)"
 set -e
 PASS="${PASS:-}"
 if [ -z "$PASS" ]; then
@@ -21,10 +21,24 @@ fi
 echo "→ 2/4 解密"
 openssl enc -d -aes-256-cbc -pbkdf2 -pass pass:"$PASS" -in jxh_ask.zip.enc -out jxh_ask.zip || { echo "❌ 解密失败（openssl 版本过旧？）"; exit 1; }
 
-echo "→ 3/4 解压到 ~/.claude/skills/"
-mkdir -p ~/.claude/skills
-unzip -o -q jxh_ask.zip -d ~/.claude/skills/ 2>/dev/null || unzip -o jxh_ask.zip -d ~/.claude/skills/
-[ -f ~/.claude/skills/姜小胡提问/SKILL.md ] && echo "   ✓ 已安装: ~/.claude/skills/姜小胡提问/"
+echo "→ 3/4 部署到本机所有 AI 客户端"
+rm -rf jxh_unzip && mkdir jxh_unzip && unzip -o -q jxh_ask.zip -d jxh_unzip/
+installed=0
+for dir in "$HOME/.claude/skills" "$HOME/.codex/skills" "$HOME/.hermes/skills"; do
+  if [ -d "$dir" ]; then
+    rm -rf "$dir/姜小胡提问"
+    cp -R jxh_unzip/姜小胡提问 "$dir/姜小胡提问"
+    rm -rf "$dir/姜小胡提问/__pycache__"
+    echo "   ✓ 已装到 $dir"
+    installed=1
+  fi
+done
+if [ "$installed" = "1" ]; then
+  echo "   (未检测到的客户端会自动跳过：只有 Claude Code 就只装 Claude Code)"
+else
+  echo "❌ 未检测到任何 AI 客户端的 skills 目录（~/.claude/skills / ~/.codex/skills / ~/.hermes/skills）"
+  exit 1
+fi
 
 echo "→ 4/4 检查 zsxq-cli"
 if command -v zsxq-cli >/dev/null 2>&1; then
@@ -39,6 +53,6 @@ else
 fi
 
 echo ""
-echo "✅ 部署完成！"
-echo "下一步：运行 zsxq-cli auth login 登录你的星球账号（需已加入「姜胡说」星球）"
-echo "然后在 Claude Code 里输入：你的问题 + 以上问题发到姜小胡"
+echo "✅ 部署完成！本机的 Claude Code / Codex / Hermes 已全部就绪。"
+echo "用法：输入你的问题 + 「以上问题发到姜小胡」"
+echo "（Hermes 需重启网关后才识别新 skill；首次使用前运行 zsxq-cli auth login 登录星球账号）"
